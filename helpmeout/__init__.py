@@ -1,13 +1,16 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
+db = SQLAlchemy()
+
 app = Flask(__name__)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['DEBUG'] = True
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///../instance/persons.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///recordings.db'
 
-db = SQLAlchemy()
 db.init_app(app)
 
-from . import routes
+from .models.users import Users
+from .models.recordings import Recordings
+from .routes import users, recordings
