@@ -21,7 +21,7 @@ def start_screen_record():
     db.session.add(new_recording)
     db.session.commit()
 
-    return jsonify({'id': id}), 201
+    return jsonify({'recording_id': id}), 201
 
 # An endpoint to add video in chunks to a recording
 @app.route('/api/recording/<id>', methods=['POST'])
@@ -40,7 +40,7 @@ def add_video_chunk(id):
     else:
         recording.video = video
     db.session.commit()
-    return jsonify({'message': 'video added'}), 201
+    return jsonify({'message': 'video added successfully'}), 201
 
 # An endpoint to get the video of a recording
 @app.route('/api/recording/<id>', methods=['GET'])
