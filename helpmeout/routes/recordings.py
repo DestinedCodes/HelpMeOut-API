@@ -29,9 +29,12 @@ def add_video_chunk(id):
     recording = Recordings.query.filter_by(id=id).first()
     if not recording:
         return jsonify({'error': 'recording not found'}), 404
-    video = request.files.get('video').read()
-    if not video:
-        return jsonify({'error': 'video is required'}), 400
+    try:
+        video = request.files.get('video').read()
+        if not video:
+            return jsonify({'error': 'video is required'}), 400
+    except:
+        return jsonify({'error': 'invalid video'}), 400
     if recording.video:
         recording.video = recording.video + video
     else:
