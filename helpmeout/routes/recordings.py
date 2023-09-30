@@ -45,6 +45,8 @@ def get_video(id):
     recording = Recordings.query.filter_by(id=id).first()
     if not recording:
         return jsonify({'error': 'recording not found'}), 404
+    if not recording.video:
+        return jsonify({'error': 'recording is empty'}), 404
     return send_file(BytesIO(recording.video), download_name=f'{recording.title}.webm', as_attachment=True)
 
 
