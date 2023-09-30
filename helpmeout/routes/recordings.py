@@ -30,7 +30,7 @@ def add_video_chunk(id):
     if not recording:
         return jsonify({'error': 'recording not found'}), 404
     try:
-        video = request.files.get('video').read()
+        video = request.json.get('video')
         if not video:
             return jsonify({'error': 'video is required'}), 400
     except:
@@ -50,7 +50,14 @@ def get_video(id):
         return jsonify({'error': 'recording not found'}), 404
     if not recording.video:
         return jsonify({'error': 'recording is empty'}), 404
-    return send_file(BytesIO(recording.video), download_name=f'{recording.title}.webm', as_attachment=True)
+    # Decode the base64 video data
+    try:
+        video_data = base64.b64decode(recording.video)
+    except Exception as e:
+        return jsonify({'error': 'error decoding video'}), 500
+    
+    # Return the video as a response
+    return Response(video_data, mimetype='video/mp4')
 
 # An endpoint to get all recordings of a user
 @app.route('/api/recording/user/<user_id>', methods=['GET'])
