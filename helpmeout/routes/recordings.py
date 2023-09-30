@@ -52,14 +52,13 @@ def get_video(id):
         return jsonify({'error': 'recording is empty'}), 404
     return send_file(BytesIO(recording.video), download_name=f'{recording.title}.webm', as_attachment=True)
 
-
 # An endpoint to get all recordings of a user
 @app.route('/api/recording/user/<user_id>', methods=['GET'])
 def get_user_recordings(user_id):
     recordings = Recordings.query.filter_by(user_id=user_id).all()
     if not recordings:
         return jsonify({'error': 'no recordings found'}), 404
-    return jsonify([recording.serialize() for recording in recordings]), 200
+    return jsonifty([{ 'title': recording.title, 'id': recording.id, 'user_id': recording.user_id, 'time': recording.time } for recording in recordings]), 200
 
 # An endpoint to get all recordings
 @app.route('/api/recording', methods=['GET'])
@@ -67,5 +66,27 @@ def get_all_recordings():
     recordings = Recordings.query.all()
     if not recordings:
         return jsonify({'error': 'no recordings found'}), 404
-    # return title, id, user_id, time of each recording in JSON format
     return jsonify([{ 'title': recording.title, 'id': recording.id, 'user_id': recording.user_id, 'time': recording.time } for recording in recordings]), 200
+
+# An endpoint to update the title of a recording
+@app.route('/api/recording/<id>', methods=['PUT'])
+def update_recording_title(id):
+    recording = Recordings.query.filter_by(id=id).first()
+    if not recording:
+        return jsonify({'error': 'recording not found'}), 404
+    title = request.json.get('title')
+    if not title:
+        return jsonify({'error': 'title is required'}), 400
+    recording.title = title
+    db.session.commit()
+    return jsonify({'message': 'title updated successfully'}), 200
+
+# An endpoint to delete a recording
+@app.route('/api/recording/<id>', methods=['DELETE'])
+def delete_recording(id):
+    recording = Recordings.query.filter_by(id=id).first()
+    if not recording:
+        return jsonify({'error': 'recording not found'}), 404
+    db.session.delete(recording)
+    db.session.commit()
+    return jsonify({'message': 'recording deleted successfully'}), 200
