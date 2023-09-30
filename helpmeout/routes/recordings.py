@@ -1,11 +1,11 @@
 from flask import jsonify, request, send_file
 import nanoid
 import subprocess
+import base64
 from io import BytesIO
 from datetime import datetime
 from helpmeout import app, db
 from helpmeout.models.recordings import Recordings
-from moviepy.editor import VideoFileClip, concatenate_videoclips, clips_array
 
 # Initialize a new screen recording
 @app.route('/api/recording', methods=['POST'])
