@@ -1,5 +1,3 @@
 flask
 nanoid
-io
-subprocess
 moviepy
