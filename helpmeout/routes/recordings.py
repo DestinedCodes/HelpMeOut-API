@@ -67,5 +67,5 @@ def get_all_recordings():
     recordings = Recordings.query.all()
     if not recordings:
         return jsonify({'error': 'no recordings found'}), 404
-    return jsonify([recording.serialize() for recording in recordings]), 200
-
+    # return title, id, user_id, time of each recording in JSON format
+    return jsonify([{ 'title': recording.title, 'id': recording.id, 'user_id': recording.user_id, 'time': recording.time } for recording in recordings]), 200
