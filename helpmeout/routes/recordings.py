@@ -50,3 +50,19 @@ def get_video(id):
     return send_file(BytesIO(recording.video), download_name=f'{recording.title}.webm', as_attachment=True)
 
 
+# An endpoint to get all recordings of a user
+@app.route('/api/recording/user/<user_id>', methods=['GET'])
+def get_user_recordings(user_id):
+    recordings = Recordings.query.filter_by(user_id=user_id).all()
+    if not recordings:
+        return jsonify({'error': 'no recordings found'}), 404
+    return jsonify([recording.serialize() for recording in recordings]), 200
+
+# An endpoint to get all recordings
+@app.route('/api/recording', methods=['GET'])
+def get_all_recordings():
+    recordings = Recordings.query.all()
+    if not recordings:
+        return jsonify({'error': 'no recordings found'}), 404
+    return jsonify([recording.serialize() for recording in recordings]), 200
+
