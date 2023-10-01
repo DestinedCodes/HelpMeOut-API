@@ -4,3 +4,5 @@ flask_cors
 gunicorn
 nanoid
 moviepy
+flasgger
+yaml
