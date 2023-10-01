@@ -5,4 +5,3 @@ gunicorn
 nanoid
 moviepy
 flasgger
-yaml
