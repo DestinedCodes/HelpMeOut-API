@@ -15,7 +15,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['DEBUG'] = True
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///recordings.db'
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+CORS(app)
 
 db.init_app(app)
 
