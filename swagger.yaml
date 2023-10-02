@@ -44,6 +44,8 @@ paths:
           in: formData
           type: file
           required: true
+      consumes:
+        - multipart/form-data  # Add this line to specify file uploads
       responses:
         201:
           description: Video added successfully
