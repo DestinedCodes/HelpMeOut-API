@@ -1,4 +1,4 @@
-swagger: '1.2'
+swagger: '2.0'
 info:
   title: HelpMeOut API
   description: API for recording and managing videos
