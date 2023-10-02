@@ -19,7 +19,10 @@ CORS(app)
 
 db.init_app(app)
 
-swagger_config = yaml.load(open('swagger.yaml'), Loader=yaml.FullLoader)
+with open('auth_swagger.yaml', 'r') as file:
+    swagger_config = yaml.load(file, Loader=yaml.FullLoader)
+
+#swagger_config = yaml.load(open('swagger.yaml'), Loader=yaml.FullLoader)
 Swagger(app, template=swagger_config)
 
 

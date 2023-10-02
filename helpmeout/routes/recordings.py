@@ -127,7 +127,7 @@ def get_transcript(id):
             return jsonify({'error': 'recording is empty'}), 404
         # Create a temporary file to store the video
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            recording.video.write(temp_file.name)
+            temp_file.write(recording.video)
             temp_filepath = temp_file.name
 
         # Convert video to audio
