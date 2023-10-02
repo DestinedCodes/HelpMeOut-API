@@ -76,6 +76,16 @@ paths:
       responses:
         200:
           description: Title updated successfully
+    delete:
+      summary: Delete a recording
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+      responses:
+        200:
+          description: Recording deleted successfully
   /stop-recording/{id}:
     post:
       summary: Stop a recording
@@ -183,14 +193,3 @@ paths:
                   type: string
                 transcript_url:
                   type: string
-    delete:
-      summary: Delete a recording
-      parameters:
-        - name: id
-          in: path
-          required: true
-          type: string
-      responses:
-        200:
-          description: Recording deleted successfully
-

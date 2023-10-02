@@ -137,7 +137,7 @@ def get_recording_details(id):
             'recording_id': id,
             'recording_url': f"{request.url_root}api/recording/{id}",
             "creator_id": recording.user_id,
-            "time": recording.time,
+            "time": recording.time.isoformat(),
             'transcript_url': f"{request.url_root}api/recording/transcript/{id}"
             }
     json_response = json.dumps(response, indent=2)
@@ -155,7 +155,7 @@ def get_user_recordings(user_id):
         'recording_id': recording.id,
         'recording_url': f"{request.url_root}api/recording/{recording.id}",
         "creator_id": recording.user_id,
-        "time": recording.time,
+        "time": recording.time.isoformat(),
         'transcript_url': f"{request.url_root}api/recording/transcript/{recording.id}"
         } for recording in recordings]
     json_response = json.dumps(response, indent=2)
@@ -173,7 +173,7 @@ def get_all_recordings():
         'recording_id': recording.id,
         'recording_url': f"{request.url_root}api/recording/{recording.id}",
         "creator_id": recording.user_id,
-        "time": recording.time,
+        "time": recording.time.isoformat(),
         'transcript_url': f"{request.url_root}api/recording/transcript/{recording.id}"
         } for recording in recordings]
     json_response = json.dumps(response, indent=2)
