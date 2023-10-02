@@ -11,6 +11,7 @@ swagger = Swagger()
 db = SQLAlchemy()
 
 app = Flask(__name__)
+CORS(app)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['DEBUG'] = True
@@ -21,8 +22,8 @@ db.init_app(app)
 swagger_config = yaml.load(open('swagger.yaml'), Loader=yaml.FullLoader)
 Swagger(app, template=swagger_config)
 
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
+CORS(app)
 from .models.users import Users
 from .models.recordings import Recordings
 from .routes import recordings
