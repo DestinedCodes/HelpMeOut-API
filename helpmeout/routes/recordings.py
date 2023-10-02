@@ -1,4 +1,4 @@
-from flask import jsonify, request, Response, send_file
+from flask import jsonify, request, Response, send_file, redirect
 import nanoid
 from datetime import datetime
 from helpmeout import app, db
@@ -45,7 +45,8 @@ def add_video_chunk(id):
     if not video:
         return jsonify({'error': 'video(file) is required'}), 400
     if recording.video:
-        recording.video = append_video(recording.video, video)
+        recording.video = video
+        # recording.video = append_video(recording.video, video)
     else:
         recording.video = video
     db.session.commit()
@@ -70,10 +71,11 @@ def stop_screen_record(id):
         return jsonify({'error': 'video(file) is required'}), 400
     if recording.video:
         recording.video = video
+        # recording.video = append_video(recording.video, video)
     else:
         recording.video = video
     db.session.commit()
-    return redirect(f"{request.url_root}api/recording/{id}")
+    return redirect(f"https://helpmeout-vid.netlify.app/")
 
 
 # An endpoint to update the title of a recording

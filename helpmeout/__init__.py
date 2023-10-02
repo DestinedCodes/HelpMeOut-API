@@ -24,4 +24,4 @@ Swagger(app, template=swagger_config)
 
 from .models.users import Users
 from .models.recordings import Recordings
-from .routes import users, recordings
+from .routes import recordings
