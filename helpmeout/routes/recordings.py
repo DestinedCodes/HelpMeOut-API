@@ -14,7 +14,6 @@ import asyncio
 DEEPGRAM_API_KEY = '32192faf34b41b9c0a289c4aa81b403171b0cdb1'
 
 # Initialize Deepgram
-deepgram = Deepgram(DEEPGRAM_API_KEY)
 
 
 # An endpoint to start a new recording
@@ -118,7 +117,8 @@ def get_video(id):
 
 # An endpoint to get the transcript of a recording
 @app.route('/api/recording/transcript/<id>', methods=['GET'])
-def get_transcript(id):
+async def get_transcript(id):
+    deepgram = Deepgram(DEEPGRAM_API_KEY)
     recording = Recordings.query.filter_by(id=id).first()
     if not recording:
         return jsonify({'error': 'recording not found'}), 404
@@ -136,13 +136,13 @@ def get_transcript(id):
         audio.write_audiofile(audio_file_path)
 
         # Transcribe audio using Deepgram
-        params = {'punctuate': True, 'tier': 'enhanced'}
+        PARAMS = {'punctuate': True, 'tier': 'enhanced'}
         with open(audio_file_path, 'rb') as audio_file:
             source = {'buffer': audio_file, 'mimetype': 'audio/mp3'}
-            response = asyncio.run(deepgram.transcription.prerecorded(source, params))
+            recording.transcript = await deepgram.transcription.prerecorded(source, PARAMS)
 
-        # Return the transcript as JSON
-        return jsonify(response)
+    # Return the transcript as JSON
+    return jsonify(recording.transcript)
 
 # An endpoint to get details of a recording
 @app.route('/api/recording/details/<id>', methods=['GET'])
