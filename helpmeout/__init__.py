@@ -11,11 +11,11 @@ swagger = Swagger()
 db = SQLAlchemy()
 
 app = Flask(__name__)
-CORS(app)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['DEBUG'] = True
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///recordings.db'
+CORS(app)
 
 db.init_app(app)
 
@@ -23,7 +23,6 @@ swagger_config = yaml.load(open('swagger.yaml'), Loader=yaml.FullLoader)
 Swagger(app, template=swagger_config)
 
 
-CORS(app)
 from .models.users import Users
 from .models.recordings import Recordings
 from .routes import recordings
