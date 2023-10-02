@@ -5,3 +5,5 @@ gunicorn
 nanoid
 moviepy
 flasgger
+asyncio
+deepgram-sdk

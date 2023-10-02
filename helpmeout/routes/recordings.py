@@ -7,7 +7,14 @@ import json
 import io
 import os
 import tempfile
+from deepgram import Deepgram
 from moviepy.editor import VideoFileClip, concatenate_videoclips
+import asyncio
+
+DEEPGRAM_API_KEY = '32192faf34b41b9c0a289c4aa81b403171b0cdb1'
+
+# Initialize Deepgram
+deepgram = Deepgram(DEEPGRAM_API_KEY)
 
 
 # An endpoint to start a new recording
@@ -106,9 +113,6 @@ def get_video(id):
         return jsonify({'error': 'recording not found'}), 404
     if not recording.video:
         return jsonify({'error': 'recording is empty'}), 404
-    if not recording.transcript:
-        # use the video to generate a transcript using whispr.ai
-        pass
     return Response(recording.video, mimetype='video/mp4')
 
 
@@ -121,10 +125,24 @@ def get_transcript(id):
     if not recording.transcript:
         if not recording.video:
             return jsonify({'error': 'recording is empty'}), 404
-        # use the video to generate a transcript using whispr.ai
-        pass
-    return Response(recording.transcript, mimetype='text/plain')
+        # Create a temporary file to store the video
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            recording.video.write(temp_file.name)
+            temp_filepath = temp_file.name
 
+        # Convert video to audio
+        audio = VideoFileClip(temp_filepath).audio
+        audio_file_path = f"{temp_filepath}.mp3"
+        audio.write_audiofile(audio_file_path)
+
+        # Transcribe audio using Deepgram
+        params = {'punctuate': True, 'tier': 'enhanced'}
+        with open(audio_file_path, 'rb') as audio_file:
+            source = {'buffer': audio_file, 'mimetype': 'audio/mp3'}
+            response = asyncio.run(deepgram.transcription.prerecorded(source, params))
+
+        # Return the transcript as JSON
+        return jsonify(response)
 
 # An endpoint to get details of a recording
 @app.route('/api/recording/details/<id>', methods=['GET'])
