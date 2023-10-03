@@ -84,7 +84,7 @@ def stop_screen_record(id):
     with open(f"helpmeout/static/{id}/{len(os.listdir(f'helpmeout/static/{id}'))}.mp4", 'wb') as f:
         f.write(video)
 
-    return Redirect(f"{request.url_root}api/recording/{id}", code=302)
+    return redirect(f"{request.url_root}api/recording/{id}", code=302)
 
 
 # An endpoint to update the title of a recording
@@ -146,10 +146,12 @@ async def get_transcript(id):
         PARAMS = {'punctuate': True, 'tier': 'enhanced'}
         with open(audio_file_path, 'rb') as audio_file:
             source = {'buffer': audio_file, 'mimetype': 'audio/mp3'}
-            recording.transcript = await deepgram.transcription.prerecorded(source, PARAMS)
+            data = await deepgram.transcription.prerecorded(source, PARAMS)
+            recording.transcript = json.dumps(data['results']['channels'][0]['alternatives'][0], indent=2)
+            db.session.commit()
 
     # Return the transcript as JSON
-    return jsonify(recording.transcript)
+    return Response(recording.transcript, mimetype='application/json'), 200
 
 # An endpoint to get details of a recording
 @app.route('/api/recording/details/<id>', methods=['GET'])
