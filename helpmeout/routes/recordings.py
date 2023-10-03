@@ -25,6 +25,7 @@ def start_screen_record():
     id = nanoid.generate(size=10)
     title = id
     time = datetime.now()
+    os.makedirs(f"helpmeout/static/{id}")
 
     new_recording = Recordings(id=id, user_id=user_id, time=time, title=title)
     db.session.add(new_recording)
@@ -50,12 +51,13 @@ def add_video_chunk(id):
     video = request.files.get('video').read()
     if not video:
         return jsonify({'error': 'video(file) is required'}), 400
-    if recording.video:
-        recording.video = video
-        # recording.video = append_video(recording.video, video)
-    else:
-        recording.video = video
-    db.session.commit()
+    # if {id}.mp4 exists then return video compiled already
+    if os.path.exists(f"helpmeout/static/{id}.mp4"):
+        return jsonify({'error': 'video compiled already'}), 400
+    # save the video chunk in the directory with name as an index if video chunk as they are being added
+    with open(f"helpmeout/static/{id}/{len(os.listdir(f'helpmeout/static/{id}'))}.mp4", 'wb') as f:
+        f.write(video)
+
     response = {
             'message': 'video added successfully',
             'recording_id': id,
@@ -75,13 +77,21 @@ def stop_screen_record(id):
     video = request.files.get('video').read()
     if not video:
         return jsonify({'error': 'video(file) is required'}), 400
-    if recording.video:
-        recording.video = video
-        # recording.video = append_video(recording.video, video)
-    else:
-        recording.video = video
-    db.session.commit()
-    return redirect(f"https://helpmeout-vid.netlify.app/")
+    # if {id}.mp4 exists then return video compiled already
+    if os.path.exists(f"helpmeout/static/{id}.mp4"):
+        return jsonify({'error': 'video compiled already'}), 400
+    # save the video chunk in the directory with name as an index if video chunk as they are being added
+    with open(f"helpmeout/static/{id}/{len(os.listdir(f'helpmeout/static/{id}'))}.mp4", 'wb') as f:
+        f.write(video)
+
+    response = {
+            'message': 'video added successfully',
+            'recording_id': id,
+            'recording_url': f"{request.url_root}api/recording/{id}"
+            }
+    json_response = json.dumps(response, indent=2)
+
+    return RedirectResponse(url=f"{request.url_root}api/recording/{id}")
 
 
 # An endpoint to update the title of a recording
@@ -110,10 +120,17 @@ def get_video(id):
     recording = Recordings.query.filter_by(id=id).first()
     if not recording:
         return jsonify({'error': 'recording not found'}), 404
-    if not recording.video:
-        return jsonify({'error': 'recording is empty'}), 404
-    return Response(recording.video, mimetype='video/mp4')
+    if os.path.exists(f"helpmeout/static/{id}"):
+        if len(os.listdir(f"helpmeout/static/{id}")) == 0:
+            return jsonify({'error': 'recording is empty'}), 404
+        # append all the video chunks in the directory
+        recording.video = append_video(id)
 
+    # open the video file
+    video_file = open(f"helpmeout/static/{id}.mp4", 'rb').read()
+
+    # return the video file
+    return Response(video_file, mimetype='video/mp4'), 200
 
 # An endpoint to get the transcript of a recording
 @app.route('/api/recording/transcript/<id>', methods=['GET'])
@@ -123,16 +140,13 @@ async def get_transcript(id):
     if not recording:
         return jsonify({'error': 'recording not found'}), 404
     if not recording.transcript:
-        if not recording.video:
-            return jsonify({'error': 'recording is empty'}), 404
-        # Create a temporary file to store the video
-        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-            temp_file.write(recording.video)
-            temp_filepath = temp_file.name
+        # if {id}.mp4 does not exist then return recording is empty
+        if not os.path.exists(f"helpmeout/static/{id}.mp4"):
+            return jsonify({'error': 'recording not ready'}), 404
 
         # Convert video to audio
-        audio = VideoFileClip(temp_filepath).audio
-        audio_file_path = f"{temp_filepath}.mp3"
+        audio = VideoFileClip(f"helpmeout/static/{id}.mp4").audio
+        audio_file_path = f"helpmeout/static/{id}.mp3"
         audio.write_audiofile(audio_file_path)
 
         # Transcribe audio using Deepgram
@@ -202,6 +216,10 @@ def get_all_recordings():
 @app.route('/api/recording/<id>', methods=['DELETE'])
 def delete_recording(id):
     recording = Recordings.query.filter_by(id=id).first()
+    # delete the directory forcefully
+    os.system(f"rm -rf helpmeout/static/{id}")
+    # delete the video file
+    os.system(f"rm -rf helpmeout/static/{id}.mp4")
     if not recording:
         return jsonify({'error': 'recording not found'}), 404
     db.session.delete(recording)
@@ -214,34 +232,26 @@ def delete_recording(id):
     return Response(json_response, mimetype='application/json'), 200
 
 
-def append_video(existing_video_data, new_video_data):
-    # Create temporary files for the video clips
-    with tempfile.NamedTemporaryFile(delete=False) as existing_temp_file:
-        existing_temp_file.write(existing_video_data)
-        existing_temp_filepath = existing_temp_file.name
+def append_video(recording_id):
+    # get the directory name
+    dir_name = f"helpmeout/static/{recording_id}"
 
-    with tempfile.NamedTemporaryFile(delete=False) as new_temp_file:
-        new_temp_file.write(new_video_data)
-        new_temp_filepath = new_temp_file.name
-
-    # Create video clips from the temporary files
-    existing_clip = VideoFileClip(existing_temp_filepath)
-    new_clip = VideoFileClip(new_temp_filepath)
+    clips = []
+    # Create video clips for all files in the directory
+    for filename in os.listdir(dir_name):
+        clips.append(VideoFileClip(f"{dir_name}/{filename}"))
 
     # Concatenate the video clips
-    final_clip = concatenate_videoclips([existing_clip, new_clip])
+    if len(clips) == 1:
+        final_clip = clips[0]
+    else:
+        final_clip = concatenate_videoclips(clips)
 
-    # Save the concateted video clip to a temporary file
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as final_temp_file:
-        final_clip.write_videofile(final_temp_file.name, codec='libx264')
-        final_temp_filepath = final_temp_file.name
+    # save the concatenated video to a file
+    final_clip.write_videofile(f"helpmeout/static/{recording_id}.mp4", codec="libx264")
 
-    # Read the temporary file and return the data
-    final_video_data = open(final_temp_filepath, 'rb').read()
+    # delete the directory forcefully
+    os.system(f"rm -rf {dir_name}")
 
-    # Delete the temporary files
-    os.remove(existing_temp_filepath)
-    os.remove(new_temp_filepath)
-    os.remove(final_temp_filepath)
+    return final_clip
 
-    return final_video_data
