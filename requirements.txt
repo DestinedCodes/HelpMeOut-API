@@ -7,3 +7,4 @@ moviepy
 flasgger
 asyncio
 deepgram-sdk
+asgiref

@@ -127,7 +127,7 @@ def get_video(id):
 
 # An endpoint to get the transcript of a recording
 @app.route('/api/recording/transcript/<id>', methods=['GET'])
-async def get_transcript(id):
+def get_transcript(id):
     deepgram = Deepgram(DEEPGRAM_API_KEY)
     recording = Recordings.query.filter_by(id=id).first()
     if not recording:
@@ -146,7 +146,7 @@ async def get_transcript(id):
         PARAMS = {'punctuate': True, 'tier': 'enhanced'}
         with open(audio_file_path, 'rb') as audio_file:
             source = {'buffer': audio_file, 'mimetype': 'audio/mp3'}
-            data = await deepgram.transcription.prerecorded(source, PARAMS)
+            data = deepgram.transcription.prerecorded(source, PARAMS)
             recording.transcript = json.dumps(data['results']['channels'][0]['alternatives'][0], indent=2)
             db.session.commit()
 
