@@ -84,14 +84,7 @@ def stop_screen_record(id):
     with open(f"helpmeout/static/{id}/{len(os.listdir(f'helpmeout/static/{id}'))}.mp4", 'wb') as f:
         f.write(video)
 
-    response = {
-            'message': 'video added successfully',
-            'recording_id': id,
-            'recording_url': f"{request.url_root}api/recording/{id}"
-            }
-    json_response = json.dumps(response, indent=2)
-
-    return RedirectResponse(url=f"{request.url_root}api/recording/{id}")
+    return Redirect(f"{request.url_root}api/recording/{id}", code=302)
 
 
 # An endpoint to update the title of a recording
