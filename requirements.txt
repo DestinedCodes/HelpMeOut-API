@@ -1,4 +1,5 @@
-flask
+# flask
+Flask[async]
 flask_sqlalchemy
 flask_cors
 gunicorn
@@ -8,4 +9,3 @@ flasgger
 asyncio
 deepgram-sdk
 asgiref
-flask[async]
