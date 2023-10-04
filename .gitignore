@@ -1,0 +1,7 @@
+__pycache__
+instance
+static
+*.pyc
+*.pyo
+*.mp4
+*.mp3
