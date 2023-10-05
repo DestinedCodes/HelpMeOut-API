@@ -3,26 +3,26 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flasgger import Swagger
 import yaml
+import os
 
-
-swagger = Swagger()
-
-
-db = SQLAlchemy()
-
+# Create the Flask app
 app = Flask(__name__)
 
+# Configuration
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['DEBUG'] = True
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///recordings.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
+
+# Initialize CORS
 CORS(app)
 
-db.init_app(app)
+# Initialize SQLAlchemy
+db = SQLAlchemy(app)
 
-swagger_config = yaml.load(open('swagger.yaml'), Loader=yaml.FullLoader)
-Swagger(app, template=swagger_config)
+# Initialize Swagger
+swagger = Swagger(app, template=yaml.load(open('swagger.yaml'), Loader=yaml.FullLoader))
 
-
-from .models.users import Users
+# Import models and routes
 from .models.recordings import Recordings
 from .routes import recordings
+
