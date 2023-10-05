@@ -1,129 +1,136 @@
-from flask import jsonify, request, Response, send_file, redirect
+from flask import jsonify, request, Response, redirect
 import nanoid
-from datetime import datetime
-from helpmeout import app, db
-from helpmeout.models.recordings import Recordings
+import string
 import json
 import io
 import os
-import tempfile
+import asyncio
 from deepgram import Deepgram
 from moviepy.editor import VideoFileClip, concatenate_videoclips
-import asyncio
+from datetime import datetime
+from helpmeout import app, db
+from helpmeout.models.recordings import Recordings
+from helpmeout.utils import merge_video
 
-DEEPGRAM_API_KEY = '32192faf34b41b9c0a289c4aa81b403171b0cdb1'
 
-# Initialize Deepgram
-
-
-# An endpoint to start a new recording
 @app.route('/api/start-recording', methods=['POST'])
 def start_screen_record():
+    # Get user_id from the JSON request
     user_id = request.json.get('user_id')
     if not user_id:
         return jsonify({'error': 'user_id is required'}), 400
-    id = nanoid.generate(size=10)
-    title = id
-    time = datetime.now()
-    os.makedirs(f"helpmeout/static/{id}")
 
-    new_recording = Recordings(id=id, user_id=user_id, time=time, title=title)
+    # Generate recording details
+    recording_id = nanoid.generate(size=10, alphabet=string.ascii_letters)
+    title = f"Recording {recording_id}"
+    time = datetime.now()
+
+    # Create a directory for the recording
+    os.makedirs(f"helpmeout/static/{recording_id}")
+
+    # Create a new recording entry in the database
+    new_recording = Recordings(id=recording_id, user_id=user_id, time=time, title=title)
     db.session.add(new_recording)
     db.session.commit()
 
     response = {
-            'message': 'recording started successfully',
-            'recording_id': id,
-            'recording_url': f"{request.url_root}api/recording/{id}"
-            }
+        'message': 'Recording started successfully',
+        'recording_id': recording_id,
+        'recording_url': f"{request.url_root}api/recording/{recording_id}"
+    }
 
-    json_response = json.dumps(response, indent=2)
-
-    return Response(json_response, mimetype='application/json'), 201
+    return jsonify(response), 201
 
 
 # An endpoint to add video in chunks to a recording
 @app.route('/api/recording/<id>', methods=['POST'])
 def add_video_chunk(id):
+    # Check if the recording with the given ID exists
     recording = Recordings.query.filter_by(id=id).first()
     if not recording:
-        return jsonify({'error': 'recording not found'}), 404
-    video = request.files.get('video').read()
-    if not video:
-        return jsonify({'error': 'video(file) is required'}), 400
-    # if {id}.mp4 exists then return video compiled already
+        return jsonify({'error': 'Recording not found'}), 404
+
+    # Check if 'video' file is present in the request
+    video_file = request.files.get('video')
+    if not video_file:
+        return jsonify({'error': 'Video (file) is required'}), 400
+
+    # Check if {id}.mp4 already exists, indicating the video is compiled
     if os.path.exists(f"helpmeout/static/{id}.mp4"):
-        return jsonify({'error': 'video compiled already'}), 400
-    # save the video chunk in the directory with name as an index if video chunk as they are being added
-    with open(f"helpmeout/static/{id}/{len(os.listdir(f'helpmeout/static/{id}'))}.mp4", 'wb') as f:
-        f.write(video)
+        return jsonify({'error': 'Video compiled already'}), 400
+
+    # Save the video chunk in the directory with an index as the filename
+    video_chunk_path = os.path.join(f"helpmeout/static/{id}", f"{len(os.listdir(f'helpmeout/static/{id}'))}.mp4")
+    with open(video_chunk_path, 'wb') as f:
+        f.write(video_file.read())
 
     response = {
-            'message': 'video added successfully',
-            'recording_id': id,
-            'recording_url': f"{request.url_root}api/recording/{id}"
-            }
-    json_response = json.dumps(response, indent=2)
+        'message': 'Video chunk added successfully',
+        'recording_id': id,
+        'recording_url': f"{request.url_root}api/recording/{id}"
+    }
 
-    return Response(json_response, mimetype='application/json'), 201
+    return jsonify(response), 201
 
 
 # An endpoint to stop a recording
 @app.route('/api/stop-recording/<id>', methods=['POST'])
 def stop_screen_record(id):
-    recording = Recordings.query.filter_by(id=id).first()
-    if not recording:
-        return jsonify({'error': 'recording not found'}), 404
-    video = request.files.get('video').read()
-    if not video:
-        return jsonify({'error': 'video(file) is required'}), 400
-    # if {id}.mp4 exists then return video compiled already
-    if os.path.exists(f"helpmeout/static/{id}.mp4"):
-        return jsonify({'error': 'video compiled already'}), 400
-    # save the video chunk in the directory with name as an index if video chunk as they are being added
-    with open(f"helpmeout/static/{id}/{len(os.listdir(f'helpmeout/static/{id}'))}.mp4", 'wb') as f:
-        f.write(video)
+    # Add the last video chunk to the recording
+    response = add_video_chunk(id)
 
-    return redirect(f"{request.url_root}api/recording/{id}", code=302)
+    # Check if error is in response
+    if 'error' in response.json:
+        return response
 
+    # Get the Video Ready
+    response = get_video(id)
 
-# An endpoint to update the title of a recording
-@app.route('/api/recording/<id>', methods=['PUT'])
-def update_recording_title(id):
-    recording = Recordings.query.filter_by(id=id).first()
-    if not recording:
-        return jsonify({'error': 'recording not found'}), 404
-    title = request.json.get('title')
-    if not title:
-        return jsonify({'error': 'title is required'}), 400
-    recording.title = title
-    db.session.commit()
-    response = {
-            'message': 'title updated successfully',
-            'recording_id': id,
-            'recording_url': f"{request.url_root}api/recording/{id}"
-            }
-    json_response = json.dumps(response, indent=2)
-    return Response(json_response, mimetype='application/json'), 200
+    # Check if error is in response
+    if 'error' in response.json:
+        return response
+
+    # Get the Transcript Ready
+    get_transcript(id)
+
+    # Check if error is in response
+    if 'error' in response.json:
+        return response
+
+    return redirect("https://helpmeout-vid.netlify.app/videodetails", code=302)
 
 
 # An endpoint to get the video of a recording
 @app.route('/api/recording/<id>', methods=['GET'])
 def get_video(id):
+    # Check if the recording with the given ID exists
     recording = Recordings.query.filter_by(id=id).first()
     if not recording:
         return jsonify({'error': 'recording not found'}), 404
+
+    # Check if the videos are still in chunks
     if os.path.exists(f"helpmeout/static/{id}"):
+        # Check if no chunk has been added yet
         if len(os.listdir(f"helpmeout/static/{id}")) == 0:
             return jsonify({'error': 'recording is empty'}), 404
-        # append all the video chunks in the directory
-        recording.video = append_video(id)
 
-    # open the video file
-    video_file = open(f"helpmeout/static/{id}.mp4", 'rb').read()
+        # Check the recording_status
+        if recording.recording_status == 'not_started':
+            recording.recording_status = 'processing'
+            db.session.commit()
+            job = executor.submit(merge_video, id)
 
-    # return the video file
-    return Response(video_file, mimetype='video/mp4'), 200
+        # Check if the video is still being compiled
+        if recording.recording_status == 'processing':
+            return Recording.response('Video is still being compiled'), 200
+
+    # Check if the video file exists
+    video_path = f"helpmeout/static/{id}.mp4"
+    if not os.path.exists(video_path):
+        return jsonify({'error': 'Video file not found'}), 500
+
+    # Stream the video file
+    return send_file(video_path, mimetype='video/mp4', as_attachment=True), 200
 
 # An endpoint to get the transcript of a recording
 @app.route('/api/recording/transcript/<id>', methods=['GET'])
@@ -170,6 +177,25 @@ def get_recording_details(id):
     json_response = json.dumps(response, indent=2)
     return Response(json_response, mimetype='application/json'), 200
 
+
+# An endpoint to update the title of a recording
+@app.route('/api/recording/<id>', methods=['PUT'])
+def update_recording_title(id):
+    recording = Recordings.query.filter_by(id=id).first()
+    if not recording:
+        return jsonify({'error': 'recording not found'}), 404
+    title = request.json.get('title')
+    if not title:
+        return jsonify({'error': 'title is required'}), 400
+    recording.title = title
+    db.session.commit()
+    response = {
+            'message': 'title updated successfully',
+            'recording_id': id,
+            'recording_url': f"{request.url_root}api/recording/{id}"
+            }
+    json_response = json.dumps(response, indent=2)
+    return Response(json_response, mimetype='application/json'), 200
 
 # An endpoint to get all recordings of a user
 @app.route('/api/recording/user/<user_id>', methods=['GET'])
@@ -225,28 +251,4 @@ def delete_recording(id):
             }
     json_response = json.dumps(response, indent=2)
     return Response(json_response, mimetype='application/json'), 200
-
-
-def append_video(recording_id):
-    # get the directory name
-    dir_name = f"helpmeout/static/{recording_id}"
-
-    clips = []
-    # Create video clips for all files in the directory
-    for filename in os.listdir(dir_name):
-        clips.append(VideoFileClip(f"{dir_name}/{filename}"))
-
-    # Concatenate the video clips
-    if len(clips) == 1:
-        final_clip = clips[0]
-    else:
-        final_clip = concatenate_videoclips(clips)
-
-    # save the concatenated video to a file
-    final_clip.write_videofile(f"helpmeout/static/{recording_id}.mp4", codec="libx264")
-
-    # delete the directory forcefully
-    os.system(f"rm -rf {dir_name}")
-
-    return final_clip
 
