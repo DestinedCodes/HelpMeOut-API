@@ -5,12 +5,10 @@ def append_video(recording_id):
     # Get the directory name
     dir_name = f"helpmeout/static/{recording_id}"
 
-    clips = []
-
-    # Create video clips for all files in the directory
-    for filename in os.listdir(dir_name):
-        clips.append(VideoFileClip(os.path.join(dir_name, filename)))
-
+    clips = [
+        VideoFileClip(os.path.join(dir_name, filename))
+        for filename in os.listdir(dir_name)
+    ]
     # Concatenate the video clips
     if len(clips) == 1:
         final_clip = clips[0]
